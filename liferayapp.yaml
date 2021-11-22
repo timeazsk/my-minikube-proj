@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: liferay-app-service
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: liferay-app
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: liferay-app
+spec:
+  selector:
+    matchLabels:
+      app: liferay-app
+  template:
+    metadata:
+      labels:
+        app: liferay-app
+    spec:
+      replicas: 1
+      containers:
+      - image: liferay/dxp:7.4.11-ep2
+        name: liferay-app
+        env:
+        - name: LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_DRIVER_UPPERCASEC_LASS_UPPERCASEN_AME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: mysql-driver
+        - name: LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_URL
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: mysql-url
+        - name: LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-user
+        - name: LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-password
+        ports:
+        - containerPort: 8000
+          name: liferay-app
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
