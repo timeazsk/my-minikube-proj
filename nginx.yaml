@@ -1,18 +1,57 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+data:
+  nginx.conf: |
+
+    events {
+      worker_connections  10240;
+    }
+    http {
+      auth_basic "Auth required";
+      auth_basic_user_file /etc/nginx/.htpasswd;
+
+      upstream tomcatservers { 
+        server liferay:8080; 
+      }   
+      server {
+        listen 80;
+        location / {
+          proxy_pass         http://tomcatservers;
+          proxy_redirect     off;
+          proxy_set_header   Host $host;
+          proxy_set_header   X-Real-IP $remote_addr;
+          proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header   X-Forwarded-Host $server_name;
+          }
+      }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: basicauth
+  data:
+    htpasswd: |
+     adminuser:$apr1$19ujva4z$Wvo749.DAMSYH8ZthapvB0
+
+
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: nginx
-  labels:
-    run: nginx
 spec:
   type: NodePort
   ports:
-  - port: 8080
+  - port: 80
     targetPort: 80
-    protocol: TCP
-    nodePort: 30000
+    nodePort: 30081
   selector:
-    run: nginx
+    app: nginx
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -30,19 +69,19 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:latest
+        image: nginx:1.16.0-alpine
         ports:
         - containerPort: 80
         volumeMounts:
-        - mountPath: /etc/nginx/ssl
-          name: secret-volume
         - mountPath: /etc/nginx/conf.d
           name: configmap-volume
+        - mountPath: /etc/nginx/.htpasswd
+          name: configmap-auth
       volumes:
-      - name: secret-volume
-        secret:
-          secretName: nginxsecret
       - name: configmap-volume
         configMap:
-          name: nginxconfigmap
+          name:  nginx-conf
+      - name: configmap-auth
+        configMap:
+          name:  basicauth
      
