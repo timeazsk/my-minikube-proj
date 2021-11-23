@@ -26,12 +26,12 @@ minikube start
 git clone https://github.com/timeazsk/my-docker-project.git
 ```
 
-Change directory
+* Change directory
 ```bash
 cd my-minikube-project
 ```
 
-Create Resources
+* Create Resources
 ```bash
 kubectl apply -f ./liferayapp.yaml
 kubectl apply -f ./mysql-config.yaml
